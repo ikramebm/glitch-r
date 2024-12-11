@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32-CAM Live Stream</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    header {
+      background-color: #470d31;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    main {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: calc(100vh - 80px);
+      flex-direction: column;
+    }
+    .video-container {
+      width: 90%;
+      max-width: 800px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      text-align: center;
+      padding: 20px;
+    }
+    video {
+      width: 100%;
+      max-height: 450px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: #f9f9f9;
+    }
+    button {
+      background-color: #470d31;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #8c3663;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ESP32-CAM Live Stream Viewer</h1>
+  </header>
+  <main>
+    <div class="video-container">
+      <h2>Flux vidéo en direct</h2>
+      <video id="video-stream" autoplay playsinline></video>
+      <button id="start-stream">Démarrer la vidéo</button>
+    </div>
+  </main>
+
+  <script>
+    const signalingServer = new WebSocket('wss://ikrame-s-websocket-server.glitch.me/');
+    let peerConnection;
+    const config = {
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    };
+    let isStreaming = false;
+ 
+    signalingServer.onopen = () => {
+      console.log('Connecté au serveur de signalisation');
+    };
+ 
+    signalingServer.onmessage = async (message) => {
+      const data = JSON.parse(message.data);
+ 
+      if (data.type === 'video-frame') {
+        // Traitement du frame vidéo
+        const videoElement = document.getElementById('video-stream');
+        videoElement.src = 'data:image/jpeg;base64,' + data.data;
+      }
+    };
+ 
+    document.getElementById('start-stream').addEventListener('click', async () => {
+      if (!isStreaming) {
+        // Envoyer un message pour démarrer le stream
+        signalingServer.send(JSON.stringify({ type: 'start-stream' }));
+       
+        isStreaming = true;
+        document.getElementById('start-stream').textContent = 'Arrêter la vidéo';
+      } else {
+        // Envoyer un message pour arrêter le stream
+        signalingServer.send(JSON.stringify({ type: 'stop-stream' }));
+       
+        isStreaming = false;
+        document.getElementById('start-stream').textContent = 'Démarrer la vidéo';
+       
+        // Effacer la vidéo
+        const videoElement = document.getElementById('video-stream');
+        videoElement.src = '';
+      }
+    });
+  </script>
+  
+</body>
+</html>
+
+
+
